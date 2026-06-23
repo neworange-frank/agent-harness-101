@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { calculateTip, distributeRemainder, splitBill, splitEvenly } from "./split";
+import {
+  calculateTip,
+  distributeRemainder,
+  splitBill,
+  splitEvenly,
+  splitWithCustomAmounts,
+} from "./split";
 
 describe("splitEvenly", () => {
   it("splits a clean amount evenly", () => {
@@ -78,5 +84,49 @@ describe("splitBill", () => {
         { person: 3, amountCents: 443 },
       ],
     });
+  });
+});
+
+describe("splitWithCustomAmounts", () => {
+  it("fills the remainder on top of custom amounts", () => {
+    expect(splitWithCustomAmounts(4200, [1200, 1200, 1200])).toEqual({
+      totalCents: 4200,
+      assignedCents: 3600,
+      unassignedCents: 600,
+      customAmounts: [
+        { person: 1, amountCents: 1200 },
+        { person: 2, amountCents: 1200 },
+        { person: 3, amountCents: 1200 },
+      ],
+      suggestedDistribution: [
+        { person: 1, amountCents: 1400 },
+        { person: 2, amountCents: 1400 },
+        { person: 3, amountCents: 1400 },
+      ],
+    });
+  });
+
+  it("distributes leftover cents fairly when the remainder is uneven", () => {
+    expect(splitWithCustomAmounts(1000, [200, 300, 300])).toEqual({
+      totalCents: 1000,
+      assignedCents: 800,
+      unassignedCents: 200,
+      customAmounts: [
+        { person: 1, amountCents: 200 },
+        { person: 2, amountCents: 300 },
+        { person: 3, amountCents: 300 },
+      ],
+      suggestedDistribution: [
+        { person: 1, amountCents: 267 },
+        { person: 2, amountCents: 367 },
+        { person: 3, amountCents: 366 },
+      ],
+    });
+  });
+
+  it("throws when custom amounts exceed the total", () => {
+    expect(() => splitWithCustomAmounts(1000, [500, 400, 200])).toThrow(
+      "custom amounts cannot exceed the total cents",
+    );
   });
 });

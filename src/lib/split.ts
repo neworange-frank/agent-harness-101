@@ -13,6 +13,14 @@ export type SplitBillResult = {
   distributedAmounts: PersonSplit[];
 };
 
+export type CustomSplitResult = {
+  totalCents: number;
+  assignedCents: number;
+  unassignedCents: number;
+  customAmounts: PersonSplit[];
+  suggestedDistribution: PersonSplit[];
+};
+
 function assertPeople(people: number): void {
   if (!Number.isInteger(people) || people < 1) {
     throw new Error("people must be at least 1");
@@ -28,6 +36,18 @@ function assertCents(totalCents: number, fieldName: string): void {
 function assertTipNumerator(tipNumerator: number): void {
   if (!Number.isInteger(tipNumerator) || tipNumerator < 0) {
     throw new Error("tip numerator must be a non-negative integer");
+  }
+}
+
+function assertCustomAmounts(customAmounts: number[], people: number): void {
+  if (customAmounts.length !== people) {
+    throw new Error("custom amounts must match the number of people");
+  }
+
+  for (const amount of customAmounts) {
+    if (!Number.isInteger(amount) || amount < 0) {
+      throw new Error("custom amounts must be non-negative integers");
+    }
   }
 }
 
@@ -73,5 +93,36 @@ export function splitBill(totalCents: number, people: number, tipNumerator = 0):
     perPersonCents,
     remainderCents,
     distributedAmounts: distributeRemainder(totalWithTipCents, people),
+  };
+}
+
+export function splitWithCustomAmounts(totalCents: number, customAmounts: number[]): CustomSplitResult {
+  assertCents(totalCents, "total cents");
+
+  const people = customAmounts.length;
+  assertPeople(people);
+  assertCustomAmounts(customAmounts, people);
+
+  const assignedCents = customAmounts.reduce((sum, amount) => sum + amount, 0);
+
+  if (assignedCents > totalCents) {
+    throw new Error("custom amounts cannot exceed the total cents");
+  }
+
+  const unassignedCents = totalCents - assignedCents;
+  const suggestedDistribution = distributeRemainder(unassignedCents, people).map((entry, index) => ({
+    person: entry.person,
+    amountCents: customAmounts[index] + entry.amountCents,
+  }));
+
+  return {
+    totalCents,
+    assignedCents,
+    unassignedCents,
+    customAmounts: customAmounts.map((amountCents, index) => ({
+      person: index + 1,
+      amountCents,
+    })),
+    suggestedDistribution,
   };
 }
